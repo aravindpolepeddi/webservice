@@ -22,6 +22,9 @@ lib-cov
 coverage
 *.lcov
 
+# for mac users
+.DS_Store
+
 # nyc test coverage
 .nyc_output
 
