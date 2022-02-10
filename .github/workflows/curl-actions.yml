@@ -4,16 +4,20 @@
 name: Node.js CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    types:
+      - opened
+    branches:    
+      - 'main'
+  push:
+    branches: 
+      - 'main'
 
 jobs:
   build:
-
+    name: curl-test-cases
     runs-on: ubuntu-latest
-
+    name: curl-test
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ matrix.node-version }}
@@ -22,4 +26,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: npm i
     - run: npm run build --if-present
-    - run: npm test
+    - run: node server.js &
+    - run: |
+            curl -I http://localhost:3000/
+            curl -I http://localhost:3000/t
