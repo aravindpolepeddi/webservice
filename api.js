@@ -6,7 +6,7 @@ app.use(express.json());
 
 app.get("/healthz", (req, res) => {
     try {
-        res.json(" 200 OK ", 200)
+        res.status(200).json("server responds with 200 OK if it is healhty.", 200)
     } catch (err) {
         res.json(err.message);
     }
@@ -15,6 +15,7 @@ app.get("/healthz", (req, res) => {
 app.get('*', function(req, res){
 
     res.send('Page not found!', 404);
+    res.status(200).json("page not found:404", 200)
 
 });
 

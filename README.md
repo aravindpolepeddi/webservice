@@ -5,7 +5,7 @@
 - Enable forking under settings > member privileges
 - Fork the git repo to ur local branch (aravindpolepeddi)
 - Clone it to your local machine
-- Add an upstream which will be your org_repo  ('git remote add upstream <<org repo url>>')
+- Add an upstream which will be your org_repo  ('git remote add upstream <org repo url>')
 - Add new branch  ('git checkout -b dev')
 - Add code changes
 - Go to org repo and compare across forks
@@ -21,3 +21,9 @@ test cases written using jest and supertest.
  Two test cases; it matches the json response body and json response status code.
 
  test case also written as part to github actions (use curl to hit the heltz api)
+
+ Tech Stack:
+ * Node.js
+ * Express.js
+ * Jest
+ * Github Actions
