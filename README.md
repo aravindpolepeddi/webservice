@@ -1,5 +1,6 @@
 # Aravind Polepeddi NUID:002102800 webservice
 
+
 - Create an organization (CSYE-6225-ORGAN)
 - Create repository in the organization (webservice)
 - Enable forking under settings > member privileges
@@ -16,14 +17,21 @@
 - pull these changes (git pull upstream main)
 - After pulling push the changes to the remote main branch ("git push origin main") 
 
+changes for new assignent:
+- added datsbase.js to connect to DB
+- added respective new endpoints
+- created table healthz in postgres
+
+
 TestCase:
 test cases written using jest and supertest. 
  Two test cases; it matches the json response body and json response status code.
 
- test case also written as part to github actions (use curl to hit the heltz api)
+ test case also written as part to github actions (use curl to hit the helthz api)
 
  Tech Stack:
  * Node.js
  * Express.js
  * Jest
  * Github Actions
+ * prostgres (pg)
