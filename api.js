@@ -6,7 +6,7 @@ app.use(express.json());
 
 app.get("/healthz", (req, res) => {
     try {
-        res.status(200).json("server responds with 200 OK if it is healhty.", 200)
+        res.status(400).json("server responds with 200 OK if it is healhty.", 400)
     } catch (err) {
         res.json(err.message);
     }
