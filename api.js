@@ -16,7 +16,7 @@ function decodeBase64(req) {
 
 app.get("/healthz", (req, res) => {
   try {
-    res.status(200).json("server responds with 200 OK if it is healhty.", 200);
+    return res.status(200).json("server responds with 200 OK if it is healhty.", 200);
   } catch (err) {
     res.json(err.message);
   }
@@ -39,105 +39,6 @@ app.post("/v1/user", async (req, res) => {
 
     if (!check || !check.length) {
       res.status(400).json("fields mandatory");
-    }
-
-    if (JSON.stringify(check) !== JSON.stringify(required_fields)) {
-      res
-        .status(400)
-        .json("first_name, last_name, username, password are mandatory!");
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const allNames = await pool.query(
-      "INSERT INTO healthz(first_name, last_name, username, password, account_created, account_updated) VALUES($1, $2, $3, $4, $5, $6) RETURNING id, first_name, last_name, username, account_created, account_updated",
-      [first_name, last_name, username, hashedPassword, new Date(), new Date()]
-    );
-    res.status(201).json(allNames.rows[0]);
-  } catch (e) {
-    if (e.code === "23505") {
-      res.status(400).json("Bad request");
-    }
-  }
-});
-
-app.get("/v1/user/self", async (req, res) => {
-  try {
-    const decoded = decodeBase64(req);
-    const username = decoded.substring(0, decoded.indexOf(":"));
-    const password = decoded.substring(
-      decoded.indexOf(":") + 1,
-      decoded.length
-    );
-    const allNames = await pool.query(
-      "SELECT * FROM healthz WHERE username =$1",
-      [username]
-    );
-    if (allNames.rows.length > 0) {
-      bcrypt.compare(password, allNames.rows[0].password, (err, response) => {
-        if (err) {
-          console.error(err.message);
-        }
-        if (response) {
-          const newval = allNames.rows[0];
-          delete newval["password"];
-          res.status(200).json(allNames.rows[0]);
-        } else {
-          res.status(401).json("Unauthorized");
-        }
-      });
-    } else {
-      res.status(401).json("Unauthorized");
-    }
-  } catch (e) {
-    if (e.code === "23505") {
-      res.status(400).json("Bad request");
-    }
-  }
-});
-
-app.put("/v1/user/self", async (req, res) => {
-  try {
-    const decoded = decodeBase64(req);
-    const username = decoded.substring(0, decoded.indexOf(":"));
-    const password = decoded.substring(
-      decoded.indexOf(":") + 1,
-      decoded.length
-    );
-    if (!username || !password) {
-      return res.status(403).json("Forbidden Request");
-    }
-    const allNames = await pool.query(
-      "SELECT * FROM healthz WHERE username =$1",
-      [username]
-    );
-    if (allNames.rows.length > 0) {
-      bcrypt.compare(
-        password,
-        allNames.rows[0].password,
-        async (err, response) => {
-          if (err) {
-            console.error(err.message);
-          }
-          if (response) {
-            try {
-                const { first_name, last_name, password} = req.body;
-                const required_fields = ["first_name", "last_name", "password"];
-                const check = req.body ? Object.keys(req.body) : null;
-  
-                if (!check || !check.length) {
-                  return res.status(400).json("fields mandatory");
-                }
-            
-                if (JSON.stringify(check) !== JSON.stringify(required_fields)) {
-                  return res
-                    .status(400)
-                    .json("first_name, last_name, password are mandatory!");
-                }
-
-              const salt = await bcrypt.genSalt(10);
-              const hashedPassword = await bcrypt.hash(password, salt);
-
     }
 
     if (JSON.stringify(check) !== JSON.stringify(required_fields)) {
@@ -274,4 +175,3 @@ app.get("*", function (req, res) {
 });
 
 module.exports = app ;
-
