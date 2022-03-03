@@ -16,7 +16,7 @@ function decodeBase64(req) {
 
 app.get("/healthz", (req, res) => {
   try {
-    res.status(200).json("server responds with 200 OK if it is healhty.", 200);
+    return res.status(200).json("server responds with 200 OK if it is healhty.", 200);
   } catch (err) {
     res.json(err.message);
   }
