@@ -5,5 +5,6 @@
   "aws_secret_key": "2n17Zbp8HfMGoNLna09lkcOQnBaErX93SZhmtthA",
   "subnet_id": "subnet-0ec35b1ee682e9985",
   "source_ami": "ami-033b95fb8079dc481" ,
-  "vpc_id": "vpc-0afb661c689cf6eee"
+  "vpc_id": "vpc-0afb661c689cf6eee",
+  "aws_acct_list": ["487291657422"]
 }

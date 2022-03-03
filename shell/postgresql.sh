@@ -34,26 +34,9 @@ sudo -u psql <<EOF
 \x
 ALTER ROLE postgres WITH PASSWORD '@uest123';
 CREATE DATABASE "postgres";
+
 \q
 EOF
-
-sudo -u psql <<EOF
-\x
-CREATE TABLE IF NOT EXISTS users
-(
-id uuid NOT NULL DEFAULT uuid_generate_v4(),
-first_name VARCHAR(255),
-last_name VARCHAR(255),
-password VARCHAR(255),
-username VARCHAR(255),
-account_created timestamp,
-account_updated timestamp,
-CONSTRAINT users_pkey PRIMARY KEY (id),
-CONSTRAINT users_username_key UNIQUE (username)
-);
-\q
-EOF
-
 
 
 sudo systemctl stop postgresql-13.service
