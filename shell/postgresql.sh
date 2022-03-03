@@ -16,8 +16,6 @@ gpgcheck=0
 EOF
 
 
-
-
 sudo yum install postgresql13 postgresql13-server -y
 sudo /usr/pgsql-13/bin/postgresql-13-setup initdb
 
