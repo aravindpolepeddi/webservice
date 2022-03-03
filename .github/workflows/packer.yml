@@ -18,7 +18,7 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-        artifact-name: CSYE-6225-ORG/webservice
+        artifact-name: CSYE-6225-ORG/webservice-${{github.run_number}}.zip
     - name: Building Zip File
       run: |
         mkdir codedeploy_artifact
