@@ -1,5 +1,7 @@
 name: Packer build
 on:
+  pull_request:
+    types: [ opened, reopened ]
   push:
     branches: [ main ]
 jobs:
