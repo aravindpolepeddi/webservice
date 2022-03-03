@@ -26,4 +26,6 @@ jobs:
         mv webservice1.zip codedeploy_artifact
     - name: Validate Template
       run: |
-        pwd
+        packer init ami.pkr.hcl
+        packer validate -var-file="vars.json" ami.pkr.hcl
+        packer build -var "file_name=/home/runner/work/webservice/webservice/codedeploy_artifact/webservice1.zip" -var-file="vars.json" ami.pkr.hcl
