@@ -10,8 +10,10 @@
   "author": "aravind",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "express": "^4.17.1",
     "jest": "^27.5.1",
+    "pg": "^8.7.3",
     "supertest": "^6.2.2"
   },
   "jest": {
