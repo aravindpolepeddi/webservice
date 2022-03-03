@@ -33,6 +33,7 @@ sudo -u postgres psql <<EOF
 ALTER ROLE postgres WITH PASSWORD '@uest123';
 CREATE DATABASE "postgres";
 \connect postgres
+CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS public.healthz
 (
