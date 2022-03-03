@@ -1,0 +1,49 @@
+{
+    "variables": {
+        "aws_access_key": "",
+        "aws_secret_key": "",
+        "aws_region": "",
+        "subnet_id": "",
+        "source_ami": "",
+        "ssh_username": "ec2-user"
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "access_key": "{{user `aws_access_key`}}",
+            "secret_key": "{{user `aws_secret_key`}}",
+            "region": "{{user `aws_region`}}",
+            "instance_type": "t2.micro",
+            "subnet_id": "{{user `subnet_id`}}",
+            "source_ami": "{{user `source_ami`}}",
+            "ssh_username": "{{user `ssh_username`}}",
+            "ami_name": "csye6225_{{timestamp}}",
+            "ami_description": "Ubuntu AMI for CSYE 6225"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "environment_vars": [
+                "FOO=foo"
+            ],
+            "inline": [
+                "sudo yum update -y",
+                "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash",
+                ". ~/.nvm/nvm.sh",
+                "nvm install node",
+                "node -e \"console.log('Running Node.js ' + process.version)\"",
+                "sudo yum -y install postgresql postgresql-contrib",
+                "sudo tee /etc/yum.repos.d/pgdg.repo<<EOF [pgdg13] name=PostgreSQL 13 for RHEL/CentOS 7 - x86_64 baseurl=https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-7-x86_64/  enabled=1 gpgcheck=0 EOF",
+                "sudo yum install postgresql13 postgresql13-server",
+                "sudo /usr/pgsql-13/bin/postgresql-12-setup initdb",
+                "sudo systemctl start --now postgresql-13",
+                "sudo systemctl enable --now postgresql-13",
+                "systemctl status postgresql-13",
+                "sudo passwd postgres",
+                "su - postgres",
+                "psql -c \"ALTER USER postgres WITH PASSWORD @uest123! \""
+            ]
+        }
+    ]
+}
