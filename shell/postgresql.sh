@@ -16,7 +16,7 @@ gpgcheck=0
 EOF
 
 
-sudo yum install postgresql13 postgresql13-server -y
+sudo yum install postgresql13 postgresql13-contrib postgresql13-server -y
 sudo /usr/pgsql-13/bin/postgresql-13-setup initdb
 
 
@@ -30,9 +30,10 @@ sudo systemctl status postgresql-13.service
 
 sudo -u postgres psql <<EOF
 \x
-ALTER ROLE postgres WITH PASSWORD '@uest123';
+ALTER ROLE postgres WITH PASSWORD '@uest123!';
 CREATE DATABASE "postgres";
 \connect postgres
+CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS public.healthz
 (

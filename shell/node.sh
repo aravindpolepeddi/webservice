@@ -18,7 +18,7 @@ cd ./webservice/
 npm i
 
 sleep 10
-sudo mv /home/ec2-user/webservice/node.service /etc/systemd/system/node.service
+sudo mv /home/ec2-user/node.service /etc/systemd/system/node.service
 
 sudo systemctl enable node.service
 
