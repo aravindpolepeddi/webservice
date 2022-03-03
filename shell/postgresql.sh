@@ -28,10 +28,11 @@ sudo systemctl status postgresql-13.service
 
 
 
-sudo -u psql <<EOF
+sudo -u postgres psql <<EOF
 \x
 ALTER ROLE postgres WITH PASSWORD '@uest123';
 CREATE DATABASE "postgres";
+\connect postgres
 
 CREATE TABLE IF NOT EXISTS public.healthz
 (
