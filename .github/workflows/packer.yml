@@ -1,0 +1,31 @@
+name: Packer build
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    name: packer workflow
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        artifact-name: CSYE-6225-ORG/webservice-${{github.run_number}}.zip
+    - name: Building Zip File
+      run: |
+        mkdir codedeploy_artifact
+        zip -r webservice1 . -x ".git/*" ".github/*" "node_modules/*" "package-lock.json" "packer/*"
+        mv webservice1.zip codedeploy_artifact
+    - name: Validate Template
+      run: |
+        packer init ami.pkr.hcl
+        packer validate -var-file="vars.json" ami.pkr.hcl
+        packer build -var "zip_file=/home/runner/work/webservice/webservice/codedeploy_artifact/webservice1.zip" -var-file="vars.json" ami.pkr.hcl
