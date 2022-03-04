@@ -23,4 +23,5 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+    - run: packer init ami.pkr.hcl
     - run: packer validate -var-file="vars.json" ami.pkr.hcl
