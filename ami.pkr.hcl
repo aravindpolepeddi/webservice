@@ -42,7 +42,7 @@ default = ""
 
 
 
-variable "aws_region" {
+variable "aws_regions" {
 type = string
 default = ""
 }
