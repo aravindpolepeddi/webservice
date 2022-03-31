@@ -3,9 +3,9 @@
   "aws_region": "us-east-1",
   "aws_access_key": "AKIAQJPKUZPU77YWIT2E",
   "aws_secret_key": "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",
-  "subnet_id": "subnet-0ec35b1ee682e9985",
+  "subnet_id": "subnet-075dabed2cefff755",
   "source_ami": "ami-033b95fb8079dc481" ,
-  "vpc_id": "vpc-0afb661c689cf6eee",
+  "vpc_id": "vpc-06e94c43e05165481",
   "aws_acct_list": ["487291657422"],
   "zip_file": ""
 }
