@@ -11,14 +11,14 @@ files:
 file_exists_behavior: OVERWRITE
 hooks:
  BeforeInstall:
-   - location: ./shell/codedeploy/beforeInstall.sh
+   - location: ./shell/beforeInstall.sh
      timeout: 300
      runas: ec2-user
  AfterInstall:
-   - location: ./shell/codedeploy/afterinstall.sh
+   - location: ./shell/afterinstall.sh
      timeout: 300
      runas: ec2-user
  ApplicationStart:
-   - location: ./shell/codedeploy/applicationStart.sh
+   - location: ./shell/applicationStart.sh
      timeout: 300
      runas: ec2-user
