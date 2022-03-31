@@ -108,7 +108,7 @@ app.post("/v1/user", async (req, res) => {
 });
 
 // get user details once the user is authorized
-app.get("/v1/user/self", async (req, res) => {
+app.get("/v2/user/self", async (req, res) => {
     try {
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
         const username = decoded.substring(0, decoded.indexOf(':')); // retrieve the username from the string
