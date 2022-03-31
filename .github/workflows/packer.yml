@@ -27,8 +27,8 @@ jobs:
     - name: Building Zip File
       run: |
         mkdir codedeploy_artifact
-        zip -r webservice1 . -x ".git/*" ".github/*" "node_modules/*" "package-lock.json" "packer/*"
-        mv webservice1.zip codedeploy_artifact
+        zip -r csye6225-webapp-${{ github.sha }} . -x ".git/*" ".github/*" "node_modules/*" "package-lock.json" "packer/*"
+        mv csye6225-webapp-${{ github.sha }}.zip codedeploy_artifact
     - name: Upload to S3
       run: |
         aws s3 sync ./codedeploy_artifact s3://${{ secrets.S3_CODEDEPLOY_BUCKET }}
