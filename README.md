@@ -65,4 +65,7 @@ aws cloudformation create-stack --stack-name <stack_name> --template-body <path_
 
 aws cloudformation delete-stack --stack-name <stack_name>
 // aws cloudformation delete-stack --profile=demo --stack-name thur-vpc2 
+ 
+ 
+ 
 
