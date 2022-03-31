@@ -83,13 +83,13 @@ build {
 
   provisioner "file" {
     source = "${var.zip_file}"
-    // source = "C:/Users/aravindpolepeddi/Desktop/webservice.zip"
+    //source = "/Users/aravindpolepeddi/Desktop/webservice.zip"
     destination = "/home/ec2-user/webservice1.zip"
   }
 
-  // provisioner "shell" {
-  //   script="./shell/postgresql.sh"
-  // }
+   provisioner "shell" {
+     script="./shell/codeDeploy.sh"
+   }
 
   provisioner "shell" {
     script="./shell/node.sh"
