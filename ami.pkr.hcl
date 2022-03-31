@@ -83,7 +83,7 @@ build {
 
   provisioner "file" {
     source = "${var.zip_file}"
-    //source = "/Users/aravindpolepeddi/Desktop/webservice.zip"
+     //source = "/Users/aravindpolepeddi/Desktop/webservice.zip"
     destination = "/home/ec2-user/webservice1.zip"
   }
 
