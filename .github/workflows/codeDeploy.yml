@@ -28,7 +28,7 @@ jobs:
         mv csye6225-webapp-${{ github.sha }}.zip codedeploy_artifact
     - name: Upload to S3
       run: |
-        aws s3 sync ./codedeploy_artifact s3://${{ secrets.S3_CODEDEPLOY_BUCKET }}
+        aws s3 sync ./codedeploy_artifact1 s3://${{ secrets.S3_CODEDEPLOY_BUCKET }}
     - name: CodeDeploy API call
       run: |
         output=$(aws deploy create-deployment \
