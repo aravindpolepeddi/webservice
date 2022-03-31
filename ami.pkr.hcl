@@ -88,7 +88,7 @@ build {
   }
 
    provisioner "shell" {
-     script="./shell/CodeDeploy.sh"
+     script="./shell/codeDeploy.sh"
    }
 
   provisioner "shell" {
