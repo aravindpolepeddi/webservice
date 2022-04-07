@@ -11,6 +11,18 @@ const statsClient = new SDC({
     port: 8125
 });
 
+const winston = require('winston');
+const logConfiguration = {
+    transports: [
+        new winston.transports.File({
+            level: 'debug',
+            // Create the log directory if it does not exist
+            filename: 'tester.log'
+        })
+    ]
+};
+const logger = winston.createLogger(logConfiguration);
+
 const app = express();
 app.use(express.json());
 app.use(fileupload());
@@ -49,6 +61,7 @@ const params = {
 app.get("/healthz", (req, res) => {
   try {
       statsClient.increment('systemname.subsystem.value');
+      logger.debug("healthz hit");
     return res.status(200).json("server responds with 200 OK if it is healhty.", 200);
   } catch (err) {
     res.json(err.message);
@@ -69,6 +82,7 @@ app.get("/gettest", async (req, res) => {
 app.post("/v1/user", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
+        logger.debug("new user create hit");
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
         const { first_name, last_name, password, username } = req.body;
@@ -83,19 +97,23 @@ app.post("/v1/user", async (req, res) => {
         })
 
         if (flag) {
+            logger.debug("invalid parameters trying to send");
             return res.status(400).json("Only first_name, last_name, username & password are allowed");
         }
 
         if (!first_name || !last_name || !username || !password) {
+            logger.debug("missing fields");
             return res.status(400).json("Fields missing");
         }
 
 
         if (!check || !check.length) {
+            logger.debug("create with no data ??");
             return res.status(400).json("No data provided!");
         }
 
         if (!validateEmail(username)) {
+            logger.debug("not valid email");
             return res.status(400).json("Enter a valid EmailID!");
         }
 
@@ -110,6 +128,7 @@ app.post("/v1/user", async (req, res) => {
 
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("User exits, need to try with different params");
             return res.status(400).json("User already exists");
         }
         console.error(e.message);
@@ -125,17 +144,20 @@ app.get("/v1/user/self", async (req, res) => {
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
 
         if (!username || !password) {
+            logger.debug("no username and password");
             return res.status(403).json('Forbidden Request!');
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
+            logger.debug("no user exists");
             return res.status(401).json('Unauthorized');
         }
 
         bcrypt.compare(password, userDetails.rows[0].password, (err, response) => { // compare the hashed password
             if (err) {
+                logger.debug("password mismatch");
                 console.error(err.message);
             }
 
@@ -149,13 +171,16 @@ app.get("/v1/user/self", async (req, res) => {
                     "account_created": account_created,
                     "account_updated": account_updated
                 };
+                logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
+                logger.debug("username and password does not match");
                 return res.status(401).json('Unauthorized');
             }
         })
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("Username in user try another");
             return res.status(400).json("Username in use");
         }
         console.error(e.message);
@@ -174,6 +199,7 @@ app.put("/v1/user/self", async (req, res) => {
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length);
 
         if (!username || !password) {
+            logger.debug("no username and password");
             return res.status(403).json('Forbidden Request!');
         }
 
@@ -190,14 +216,17 @@ app.put("/v1/user/self", async (req, res) => {
         })
 
         if (flag) {
+            logger.debug("invalid params");
             return res.status(400).json('Only first_name, last_name, password are allowed!');
         }
 
         if (!checkUpdate || !checkUpdate.length) {
+            logger.debug("empty data ?");
             return res.status(400).json("No data provided!");
         }
 
         if (checkUpdate.includes("username")) {
+            logger.debug("Can't update userName");
             return res.status(400).json("Can't update userName");
         }
 
@@ -210,6 +239,7 @@ app.put("/v1/user/self", async (req, res) => {
         bcrypt.compare(password, userDetails.rows[0].password, async (err, response) => {
 
             if (userDetails.rows[0].username != username) {
+                logger.debug("username mismatch");
                 return res.status(401).json('Unauthorized');
             }
 
@@ -223,15 +253,18 @@ app.put("/v1/user/self", async (req, res) => {
                 const { first_name, last_name, username, id } = userDetails.rows[0];
 
                 const updatedEntry = await pool.query('UPDATE healthz SET first_name=$1, last_name=$2,password=$3,username=$4,account_updated=$5 WHERE id=$6', [!req.body.first_name ? first_name : req.body.first_name, !req.body.last_name ? last_name : req.body.last_name, !hashedPassword1 ? userDetails.rows[0].password : hashedPassword1, !req.body.username ? username : req.body.username, new Date(), id]);
+                logger.debug("user updated successfully");
                 res.status(204).json("User updated");
             }
 
             else {
+                logger.debug("invalid username and password");
                 return res.status(401).json('Unauthorized');
             }
         })
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("username already exits try another");
             return res.status(400).json("Username in use");
         }
         console.error(e.message);
@@ -249,12 +282,14 @@ app.post("/v1/user/self/pic", async (req, res) => {
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
 
         if (!username || !password) {
+            logger.debug("no username and password");
             return res.status(403).json('Forbidden Request!');
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
+            logger.debug("no user exists");
             return res.status(401).json('Unauthorized');
         }
 
@@ -305,11 +340,13 @@ app.post("/v1/user/self/pic", async (req, res) => {
                 uploadFile(req.files.file.data);
 
             } else { // if the password does not match, return Unauthorized
+                logger.debug("image added successfully");
                 return res.status(401).json('Unauthorized');
             }
         })
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("username exists");
             return res.status(400).json("Username in use");
         }
         console.error(e.message);
@@ -331,6 +368,7 @@ app.delete("/v1/user/self/pic", async (req, res) => {
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
+            logger.debug("no data to delete");
             return res.status(401).json('Unauthorized');
         }
 
@@ -351,6 +389,7 @@ app.delete("/v1/user/self/pic", async (req, res) => {
                             console.log(err);
                         } else {
                             const userDetails1 = await pool.query("DELETE FROM images where user_id=$1", [userDetails.rows[0].id]); // check if the user is present in the DB
+                            logger.debug("image deleted");
                             res.status(204).json("Profile image deleted");
                         }
                     })
@@ -359,11 +398,13 @@ app.delete("/v1/user/self/pic", async (req, res) => {
                 deleteFile(req.files.file.data);
 
             } else { // if the password does not match, return Unauthorized
+                logger.debug("username and password do not match");
                 return res.status(401).json('Unauthorized');
             }
         })
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("username exists");
             return res.status(400).json("Username in use");
         }
         console.error(e.message);
@@ -379,6 +420,7 @@ app.get("/v1/user/self/pic", async (req, res) => {
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
 
         if (!username || !password) {
+            logger.debug("no username or password");
             return res.status(403).json('Forbidden Request!');
         }
 
@@ -386,10 +428,12 @@ app.get("/v1/user/self/pic", async (req, res) => {
         const imageDetails = await pool.query("SELECT * FROM images where user_id=$1", [userDetails.rows[0].id]);
 
         if (imageDetails.rows.length == 0) {
+            logger.debug("no image details found");
             return res.status(404).json('Not Found');
         }
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
+            logger.debug("user does not exists");
             return res.status(401).json('Unauthorized');
         }
 
@@ -412,11 +456,13 @@ app.get("/v1/user/self/pic", async (req, res) => {
                 };
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
+                logger.debug("password does not match");
                 return res.status(401).json('Unauthorized');
             }
         })
     } catch (e) {
         if (e.code === '23505') {
+            logger.debug("username exists");
             return res.status(400).json("Username in use");
         }
         console.error(e.message);
