@@ -5,6 +5,12 @@ var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
 
+const SDC = require('statsd-client');
+const statsClient = new SDC({
+    host: 'localhost',
+    port: 8125
+});
+
 const app = express();
 app.use(express.json());
 app.use(fileupload());
@@ -42,6 +48,7 @@ const params = {
 
 app.get("/healthz", (req, res) => {
   try {
+      statsClient.increment('systemname.subsystem.value');
     return res.status(200).json("server responds with 200 OK if it is healhty.", 200);
   } catch (err) {
     res.json(err.message);
@@ -50,6 +57,7 @@ app.get("/healthz", (req, res) => {
 
 app.get("/gettest", async (req, res) => {
   try {
+    statsClient.increment('systemname.subsystem.value');
     const allNames = await pool.query("SELECT * FROM healthz");
     res.json(allNames.rows);
   } catch (e) {
@@ -60,6 +68,7 @@ app.get("/gettest", async (req, res) => {
 // create a new user
 app.post("/v1/user", async (req, res) => {
     try {
+        statsClient.increment('systemname.subsystem.value');
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
         const { first_name, last_name, password, username } = req.body;
@@ -110,6 +119,7 @@ app.post("/v1/user", async (req, res) => {
 // get user details once the user is authorized
 app.get("/v1/user/self", async (req, res) => {
     try {
+        statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
         const username = decoded.substring(0, decoded.indexOf(':')); // retrieve the username from the string
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
@@ -155,6 +165,7 @@ app.get("/v1/user/self", async (req, res) => {
 // update user once the user is authenticated
 app.put("/v1/user/self", async (req, res) => {
     try {
+        statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req);
         const new_password = req.body.password;
         const checkUpdate = req.body ? Object.keys(req.body) : null;
@@ -232,6 +243,7 @@ app.put("/v1/user/self", async (req, res) => {
 app.post("/v1/user/self/pic", async (req, res) => {
 
     try {
+        statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
         const username = decoded.substring(0, decoded.indexOf(':')); // retrieve the username from the string
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
@@ -307,6 +319,7 @@ app.post("/v1/user/self/pic", async (req, res) => {
 // delete a profile picture
 app.delete("/v1/user/self/pic", async (req, res) => {
     try {
+        statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
         const username = decoded.substring(0, decoded.indexOf(':')); // retrieve the username from the string
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
@@ -360,6 +373,7 @@ app.delete("/v1/user/self/pic", async (req, res) => {
 // get a profile picture
 app.get("/v1/user/self/pic", async (req, res) => {
     try {
+        statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
         const username = decoded.substring(0, decoded.indexOf(':')); // retrieve the username from the string
         const password = decoded.substring(decoded.indexOf(':') + 1, decoded.length); // retrieve the password from the string
@@ -411,15 +425,18 @@ app.get("/v1/user/self/pic", async (req, res) => {
 
 // If page not found, return 404 status
 app.get('*', function (req, res) {
+    statsClient.increment('systemname.subsystem.value');
     res.status(404).json("Page not found!")
 });
 
 app.post('*', function (req, res) {
+    statsClient.increment('systemname.subsystem.value');
     res.status(404).json("Page not found!")
 });
 
 
 app.put('*', function (req, res) {
+    statsClient.increment('systemname.subsystem.value');
     res.status(404).json("Page not found!")
 });
 
