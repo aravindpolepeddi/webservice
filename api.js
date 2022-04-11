@@ -79,7 +79,7 @@ app.get("/gettest", async (req, res) => {
 });
 
 // create a new user
-app.post("/v1/user", async (req, res) => {
+app.post("/v2/user", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         logger.debug("new user create hit");
@@ -136,7 +136,7 @@ app.post("/v1/user", async (req, res) => {
 });
 
 // get user details once the user is authorized
-app.get("/v1/user/self", async (req, res) => {
+app.get("/v2/user/self", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
