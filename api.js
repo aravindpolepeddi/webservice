@@ -137,7 +137,7 @@ app.post("/v1/user", async (req, res) => {
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
         const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
-        res.status(201).json(newEntry.rows[0], sns);
+        res.status(201).json(newEntry.rows[0]);
 
 
     } catch (e) {
