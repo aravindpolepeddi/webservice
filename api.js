@@ -5,6 +5,7 @@ var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
 
+
 const SDC = require('statsd-client');
 const statsClient = new SDC({
     host: 'localhost',
@@ -34,6 +35,7 @@ const fs = require('fs');
 //const BUCKET_NAME = "polepeddi";
 const region = 'us-east-1';
 const BUCKET_NAME = process.env.BUCKET_NAME;
+//const sns = new AWS.SNS({credentials: credentials, region: 'us-east-1'});
 
 function decodeBase64(req) {
   const hashedHeader = req.headers.authorization;
@@ -42,12 +44,17 @@ function decodeBase64(req) {
   const decoded = base64Val.toString("utf-8");
   return decoded;
 }
-/*
-const s3 = new AWS.S3({
-  accessKeyId: "AKIAQJPKUZPU77YWIT2E",
-  secretAccessKey: "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",
-  region
-});*/
+
+const sns = new AWS.SNS({
+  accessKeyId: "AKIAXC5GYTTHAD4UL4GA",
+  secretAccessKey: "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",
+  region: "us-east-1"
+});
+
+const SNSparams = {
+    Message: "{test: TEST}",
+    TopicArn: 'MySNSTopic'
+};
 
 const s3 = new AWS.S3({
   region
@@ -79,13 +86,13 @@ app.get("/gettest", async (req, res) => {
 });
 
 // create a new user
-app.post("/v2/user", async (req, res) => {
+app.post("/v1/user", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         logger.debug("new user create hit");
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
-        const { first_name, last_name, password, username } = req.body;
+        const { first_name, last_name, password, username, email } = req.body;
 
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
@@ -101,7 +108,7 @@ app.post("/v2/user", async (req, res) => {
             return res.status(400).json("Only first_name, last_name, username & password are allowed");
         }
 
-        if (!first_name || !last_name || !username || !password) {
+        if (!first_name || !last_name || !username || !password ) {
             logger.debug("missing fields");
             return res.status(400).json("Fields missing");
         }
@@ -121,10 +128,17 @@ app.post("/v2/user", async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        //sns publish and then add entry in DB
+        sns.publish(SNSparams, function(err, data) {
+            if (err) console.log(err, err.stack); 
+            else console.log(data + "triggred");
+        });
+
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
         const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
-        res.status(201).json(newEntry.rows[0]);
+        res.status(201).json(newEntry.rows[0], sns);
+
 
     } catch (e) {
         if (e.code === '23505') {
@@ -136,7 +150,7 @@ app.post("/v2/user", async (req, res) => {
 });
 
 // get user details once the user is authorized
-app.get("/v2/user/self", async (req, res) => {
+app.get("/v1/user/self", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
