@@ -86,7 +86,7 @@ app.get("/gettest", async (req, res) => {
 });
 
 // create a new user
-app.post("/v2/user", async (req, res) => {
+app.post("/v1/user", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         logger.debug("new user create hit");
@@ -139,7 +139,7 @@ app.post("/v2/user", async (req, res) => {
         const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
         res.status(201).json(newEntry.rows[0], sns);
 
-        
+
     } catch (e) {
         if (e.code === '23505') {
             logger.debug("User exits, need to try with different params");
@@ -150,7 +150,7 @@ app.post("/v2/user", async (req, res) => {
 });
 
 // get user details once the user is authorized
-app.get("/v2/user/self", async (req, res) => {
+app.get("/v1/user/self", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
