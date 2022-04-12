@@ -94,4 +94,8 @@ build {
   provisioner "shell" {
     script="./shell/node.sh"
   }
+
+    provisioner "shell" {
+    script="./shell/cloudwatch.sh"
+  }
 }
