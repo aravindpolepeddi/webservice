@@ -52,12 +52,8 @@ const sns = new AWS.SNS({
   secretAccessKey: "viR2GSwFmok1AXl10DXqc7Ac45LuCCbiLqmjwjjO",
   region: "us-east-1"
 });
-/*
-const SNSparams = {
-    Message: "{test: TEST}",
-    TopicArn: 'MySNSTopic'
-};
-*/
+
+
 const s3 = new AWS.S3({
   region
 });
@@ -166,6 +162,14 @@ app.post("/v1/user", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         //sns publish and then add entry in DB
+        const SNSparams = {
+            Message: {"username": username,
+                      "first_name": first_name,
+                      "last_name": last_name,
+                      "password": password,
+                      "email": username},
+            TopicArn: 'csye6226-sns-topic-Tv01'
+        };
         
         sns.publish(SNSparams, function(err, data) {
             if (err) console.log(err, err.stack); 
