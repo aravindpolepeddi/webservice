@@ -4,6 +4,9 @@ const bcrypt = require('bcryptjs');
 var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
+const jwt = require('jsonwebtoken');
+const AWS = require('aws-sdk');
+
 
 
 const SDC = require('statsd-client');
@@ -29,7 +32,6 @@ app.use(express.json());
 app.use(fileupload());
 app.use(cors())
 require("dotenv").config();
-const AWS = require('aws-sdk');
 const fs = require('fs');
 
 //const BUCKET_NAME = "polepeddi";
@@ -50,12 +52,12 @@ const sns = new AWS.SNS({
   secretAccessKey: "viR2GSwFmok1AXl10DXqc7Ac45LuCCbiLqmjwjjO",
   region: "us-east-1"
 });
-
+/*
 const SNSparams = {
     Message: "{test: TEST}",
     TopicArn: 'MySNSTopic'
 };
-
+*/
 const s3 = new AWS.S3({
   region
 });
@@ -63,6 +65,41 @@ const s3 = new AWS.S3({
 const params = {
   Bucket: BUCKET_NAME
 }
+
+let awsConfig = {
+    "region": "us-east-1",
+    "accessKeyId": "AKIAXC5GYTTHAD4UL4GA",
+    "secretAccessKey": "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"
+}
+AWS.config.update(awsConfig);
+let docClient = new AWS.DynamoDB.DocumentClient({ "endpoint": "http://dynamodb.us-east-1.amazonaws.com", region });
+
+function save(userid, token, status) {
+    const secondsSinceEpoch = Math.round(Date.now() / 1000);
+    const expirationTime = secondsSinceEpoch + 300;
+    var input = {
+        "id": userid,
+        "Token": token,
+        "TTL": expirationTime
+    };
+    var params = {
+        TableName: "myTableName",
+        // TableName: "csye6225",
+        Item: input
+    }
+    docClient.put(params, function (err, data) {
+        if (err) {
+            console.log(err);
+            logger.error("users::save::error - " + JSON.stringify(err, null, 2));
+        } else {
+            console.log(data);
+            logger.info("users::save::success");
+        }
+    });
+};
+
+
+
 
 
 app.get("/healthz", (req, res) => {
@@ -129,16 +166,20 @@ app.post("/v1/user", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         //sns publish and then add entry in DB
+        
         sns.publish(SNSparams, function(err, data) {
             if (err) console.log(err, err.stack); 
             else console.log(data + "triggred");
         });
 
+        const token = jwt.sign({ username }, 'my_secret_key');
+
+        save(username,token,"ok");
+
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
         const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
         res.status(201).json(newEntry.rows[0]);
-
 
     } catch (e) {
         if (e.code === '23505') {
