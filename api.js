@@ -166,11 +166,11 @@ app.post("/v1/user", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         //sns publish and then add entry in DB
-        /*
+        
         sns.publish(SNSparams, function(err, data) {
             if (err) console.log(err, err.stack); 
             else console.log(data + "triggred");
-        });*/
+        });
 
         const token = jwt.sign({ username }, 'my_secret_key');
 
