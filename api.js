@@ -53,7 +53,6 @@ const sns = new AWS.SNS({
   region: "us-east-1"
 });
 
-
 const s3 = new AWS.S3({
   region
 });
@@ -177,9 +176,10 @@ app.post("/v1/user", async (req, res) => {
             else console.log(data + "triggred");
         });*/
 
-        const token = jwt.sign({ username }, 'my_secret_key');
+        //const token = jwt.sign({ username }, 'my_secret_key');
 
-        save(username,token,"ok");
+        //save(username,token,"ok");
+
 
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
