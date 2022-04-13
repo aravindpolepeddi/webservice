@@ -4,8 +4,10 @@ const bcrypt = require('bcryptjs');
 var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
-var jwt = require('jsonwebtoken');
-var token;
+const jwt = require('jsonwebtoken');
+const AWS = require('aws-sdk');
+
+
 
 const SDC = require('statsd-client');
 const statsClient = new SDC({
@@ -30,7 +32,6 @@ app.use(express.json());
 app.use(fileupload());
 app.use(cors())
 require("dotenv").config();
-const AWS = require('aws-sdk');
 const fs = require('fs');
 
 //const BUCKET_NAME = "polepeddi";
@@ -51,12 +52,12 @@ const sns = new AWS.SNS({
   secretAccessKey: "viR2GSwFmok1AXl10DXqc7Ac45LuCCbiLqmjwjjO",
   region: "us-east-1"
 });
-
+/*
 const SNSparams = {
     Message: "{test: TEST}",
     TopicArn: 'MySNSTopic'
 };
-
+*/
 const s3 = new AWS.S3({
   region
 });
@@ -65,13 +66,41 @@ const params = {
   Bucket: BUCKET_NAME
 }
 
-
-const client = new AWS.DynamoDB.DocumentClient({ "endpoint": "http://dynamodb.us-east-1.amazonaws.com", region });
-const tableName = 'myTableName';
 let awsConfig = {
-    region: "us-east-1"
+    "region": "us-east-1",
+    "accessKeyId": "AKIAXC5GYTTHAD4UL4GA",
+    "secretAccessKey": "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"
 }
 AWS.config.update(awsConfig);
+let docClient = new AWS.DynamoDB.DocumentClient({ "endpoint": "http://dynamodb.us-east-1.amazonaws.com", region });
+
+function save(userid, token, status) {
+    const secondsSinceEpoch = Math.round(Date.now() / 1000);
+    const expirationTime = secondsSinceEpoch + 300;
+    var input = {
+        "id": userid,
+        "Token": token,
+        "TTL": expirationTime
+    };
+    var params = {
+        TableName: "myTableName",
+        // TableName: "csye6225",
+        Item: input
+    }
+    docClient.put(params, function (err, data) {
+        if (err) {
+            console.log(err);
+            logger.error("users::save::error - " + JSON.stringify(err, null, 2));
+        } else {
+            console.log(data);
+            logger.info("users::save::success");
+        }
+    });
+};
+
+
+
+
 
 app.get("/healthz", (req, res) => {
   try {
@@ -100,7 +129,7 @@ app.post("/v1/user", async (req, res) => {
         logger.debug("new user create hit");
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
-        const { first_name, last_name, password, username } = req.body;
+        const { first_name, last_name, password, username, email } = req.body;
 
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
@@ -139,41 +168,18 @@ app.post("/v1/user", async (req, res) => {
         //sns publish and then add entry in DB
         /*
         sns.publish(SNSparams, function(err, data) {
-            logger.debug("sns publish hit");
             if (err) console.log(err, err.stack); 
             else console.log(data + "triggred");
-        });
-        */
+        });*/
 
-        var Dynamoparams = {
-            TableName: tableName,
-            Item: {
-                "email": username
-            }
-        };
+        const token = jwt.sign({ username }, 'my_secret_key');
 
-        token = jwt.sign(
-            Dynamoparams,
-            'secret'
-        );
-        console.log(token);
-
-
-        client.put(Dynamoparams, (err, data) => {
-            if (err) {
-                console.error("Unable to add item.");
-                console.error("Error JSON:", JSON.stringify(err, null, 2));
-            } else {
-                console.log("Added item:", JSON.stringify(data, null, 2));
-            }
-        });
-        
+        save(username,token,"ok");
 
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
         const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
         res.status(201).json(newEntry.rows[0]);
-
 
     } catch (e) {
         if (e.code === '23505') {
@@ -220,12 +226,6 @@ app.get("/v1/user/self", async (req, res) => {
                     "account_created": account_created,
                     "account_updated": account_updated
                 };
-                if(token){
- 
-                    // Verify the token using jwt.verify method
-                    const decode = jwt.verify(token, 'secret');
-                    console.log(decode);
-                }
                 logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
