@@ -4,7 +4,8 @@ const bcrypt = require('bcryptjs');
 var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
-
+var jwt = require('jsonwebtoken');
+var token;
 
 const SDC = require('statsd-client');
 const statsClient = new SDC({
@@ -65,6 +66,13 @@ const params = {
 }
 
 
+const client = new AWS.DynamoDB.DocumentClient({ "endpoint": "http://dynamodb.us-east-1.amazonaws.com", region });
+const tableName = 'myTableName';
+let awsConfig = {
+    region: "us-east-1"
+}
+AWS.config.update(awsConfig);
+
 app.get("/healthz", (req, res) => {
   try {
       statsClient.increment('systemname.subsystem.value');
@@ -92,7 +100,7 @@ app.post("/v1/user", async (req, res) => {
         logger.debug("new user create hit");
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
-        const { first_name, last_name, password, username, email } = req.body;
+        const { first_name, last_name, password, username } = req.body;
 
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
@@ -129,10 +137,37 @@ app.post("/v1/user", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         //sns publish and then add entry in DB
+        /*
         sns.publish(SNSparams, function(err, data) {
+            logger.debug("sns publish hit");
             if (err) console.log(err, err.stack); 
             else console.log(data + "triggred");
         });
+        */
+
+        var Dynamoparams = {
+            TableName: tableName,
+            Item: {
+                "email": username
+            }
+        };
+
+        token = jwt.sign(
+            Dynamoparams,
+            'secret'
+        );
+        console.log(token);
+
+
+        client.put(Dynamoparams, (err, data) => {
+            if (err) {
+                console.error("Unable to add item.");
+                console.error("Error JSON:", JSON.stringify(err, null, 2));
+            } else {
+                console.log("Added item:", JSON.stringify(data, null, 2));
+            }
+        });
+        
 
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
@@ -185,6 +220,12 @@ app.get("/v1/user/self", async (req, res) => {
                     "account_created": account_created,
                     "account_updated": account_updated
                 };
+                if(token){
+ 
+                    // Verify the token using jwt.verify method
+                    const decode = jwt.verify(token, 'secret');
+                    console.log(decode);
+                }
                 logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
