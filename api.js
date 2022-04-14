@@ -4,6 +4,10 @@ const bcrypt = require('bcryptjs');
 var uuid = require('uuid');
 var fileupload = require('express-fileupload');
 var cors = require('cors');
+const jwt = require('jsonwebtoken');
+const AWS = require('aws-sdk');
+
+
 
 const SDC = require('statsd-client');
 const statsClient = new SDC({
@@ -23,17 +27,19 @@ const logConfiguration = {
 };
 const logger = winston.createLogger(logConfiguration);
 
+
+
 const app = express();
 app.use(express.json());
 app.use(fileupload());
 app.use(cors())
 require("dotenv").config();
-const AWS = require('aws-sdk');
 const fs = require('fs');
 
 //const BUCKET_NAME = "polepeddi";
 const region = 'us-east-1';
 const BUCKET_NAME = process.env.BUCKET_NAME;
+//const sns = new AWS.SNS({credentials: credentials, region: 'us-east-1'});
 
 function decodeBase64(req) {
   const hashedHeader = req.headers.authorization;
@@ -42,12 +48,12 @@ function decodeBase64(req) {
   const decoded = base64Val.toString("utf-8");
   return decoded;
 }
-/*
-const s3 = new AWS.S3({
-  accessKeyId: "AKIAQJPKUZPU77YWIT2E",
-  secretAccessKey: "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",
-  region
-});*/
+
+const sns = new AWS.SNS({
+  accessKeyId: "AKIAXC5GYTTHAD4UL4GA",
+  secretAccessKey: "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",
+  region: "us-east-1"
+});
 
 const s3 = new AWS.S3({
   region
@@ -56,6 +62,64 @@ const s3 = new AWS.S3({
 const params = {
   Bucket: BUCKET_NAME
 }
+
+let awsConfig = {
+    "region": "us-east-1",
+    "accessKeyId": "AKIAXC5GYTTHAD4UL4GA",
+    "secretAccessKey": "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"
+}
+AWS.config.update(awsConfig);
+let docClient = new AWS.DynamoDB.DocumentClient({ "endpoint": "http://dynamodb.us-east-1.amazonaws.com", region });
+
+function save(userid, token, status) {
+    const secondsSinceEpoch = Math.round(Date.now() / 1000);
+    const expirationTime = secondsSinceEpoch + 300;
+    var input = {
+        "id": userid,
+        "Token": token,
+        "TTL": expirationTime
+    };
+    var params = {
+        TableName: "myTableName",
+        // TableName: "csye6225",
+        Item: input
+    }
+    docClient.put(params, function (err, data) {
+        if (err) {
+            console.log(err);
+            logger.error("users::save::error - " + JSON.stringify(err, null, 2));
+        } else {
+            console.log(data);
+            logger.info("users::save::success");
+        }
+    });
+};
+
+async function logSingleItem(token){
+    try {
+        var params = {
+            Key: {
+             "token": {"S": token}
+            }, 
+            TableName: "myTableName"
+        };
+        var result = await dynamodb.getItem(params).promise();
+        logger.debug("get getails from dymano");
+        const secondsSinceEpoch = Math.round(Date.now() / 1000);
+        if (Object.keys(result).length !== 0) {
+         if (result.Item.TTL < secondsSinceEpoch) {
+             return res.status(401).json('Token expired');
+         }
+      }
+        
+        return (JSON.stringify(result));
+    } catch (error) {
+        return error;
+    }
+}
+
+
+
 
 
 app.get("/healthz", (req, res) => {
@@ -68,24 +132,45 @@ app.get("/healthz", (req, res) => {
   }
 });
 
-app.get("/gettest", async (req, res) => {
+app.get("/v1/verifyUserEmail", async (req, res) => {
   try {
-    statsClient.increment('systemname.subsystem.value');
-    const allNames = await pool.query("SELECT * FROM healthz");
-    res.json(allNames.rows);
+    let flag = false;
+    const check = req.body ? Object.keys(req.body) : null;
+    check.forEach((value) => {
+        if (!requiredFields1.includes(value)) {
+            flag = true;
+        }
+    })
+    if (flag) {
+        logger.debug("invalid parameters trying to send");
+        return res.status(400).json("somthing wrong");
+    }
+
+    else{
+        const { email, token } = req.query;
+        var result = logSingleItem(token);
+        if (result=""){
+            res.status(400).json("link expired");
+        }
+        else{
+            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
+            res.status(201).json("created");
+        } 
+
+    }
   } catch (e) {
     console.error(e.message);
   }
 });
 
 // create a new user
-app.post("/v2/user", async (req, res) => {
+app.post("/v1/user", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         logger.debug("new user create hit");
         const reqFields = ["first_name", "last_name", "password", "username"];
         const check = req.body ? Object.keys(req.body) : null;
-        const { first_name, last_name, password, username } = req.body;
+        const { first_name, last_name, password, username, email } = req.body;
 
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
@@ -101,7 +186,7 @@ app.post("/v2/user", async (req, res) => {
             return res.status(400).json("Only first_name, last_name, username & password are allowed");
         }
 
-        if (!first_name || !last_name || !username || !password) {
+        if (!first_name || !last_name || !username || !password ) {
             logger.debug("missing fields");
             return res.status(400).json("Fields missing");
         }
@@ -121,9 +206,38 @@ app.post("/v2/user", async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        //sns publish and then add entry in DB
+        const token = jwt.sign({ username }, 'my_secret_key');
+        
+        const SNSparams = {
+            Message: JSON.stringify({
+                username,
+                token,
+                messageType: "Notification",
+                domainName: "prod.polepeddiaravind.me",
+                first_name: first_name,
+                verified: "false"
+            }),
+            TopicArn: 'arn:aws:sns:us-east-1:487291657422:csye6226-sns-topic-Tv01',
+        }
+console.log(SNSparams);
+
+        sns.publish(SNSparams, function(err, data) {
+            logger.debug("enterd sns publish");
+            if (err) console.log(err, err.stack); 
+            else {console.log(data + "triggred");
+            logger.debug("success sns");
+        }
+        });
+
+        
+
+        save(username,token,"ok");
+
+         const account_verified=false;
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
-        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
+        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), 'false']);
         res.status(201).json(newEntry.rows[0]);
 
     } catch (e) {
@@ -136,7 +250,7 @@ app.post("/v2/user", async (req, res) => {
 });
 
 // get user details once the user is authorized
-app.get("/v2/user/self", async (req, res) => {
+app.get("/v1/user/self", async (req, res) => {
     try {
         statsClient.increment('systemname.subsystem.value');
         const decoded = decodeBase64(req); // decode the base64 hashed password via the decodeBase64 method
@@ -147,7 +261,7 @@ app.get("/v2/user/self", async (req, res) => {
             logger.debug("no username and password");
             return res.status(403).json('Forbidden Request!');
         }
-
+        
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
@@ -162,14 +276,18 @@ app.get("/v2/user/self", async (req, res) => {
             }
 
             if (response) { // if the password matches
-                const { id, first_name, last_name, username, account_created, account_updated } = userDetails.rows[0];
+                const { id, first_name, last_name, username, account_created, account_updated, account_verified} = userDetails.rows[0];
+                if(account_verified === "false"){
+                    return res.status(400).json("unverifed account");
+                }
                 const response = {
                     "id": id,
                     "first_name": first_name,
                     "last_name": last_name,
                     "username": username,
                     "account_created": account_created,
-                    "account_updated": account_updated
+                    "account_updated": account_updated,
+                    "account_verified": account_verified
                 };
                 logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
@@ -203,7 +321,6 @@ app.put("/v1/user/self", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
-
         const check = req.body ? Object.keys(req.body) : null;
         const { first_name, last_name } = req.body;
         const requiredFields = ["first_name", "last_name", "password"];
@@ -231,6 +348,10 @@ app.put("/v1/user/self", async (req, res) => {
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]);
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, account_verified} = userDetails.rows[0];
+        if(account_verified === "false"){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) {
             return res.status(401).json('Unauthorized');
@@ -286,7 +407,13 @@ app.post("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, account_verified} = userDetails.rows[0];
+        if(account_verified === "false"){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
             logger.debug("no user exists");
@@ -365,7 +492,13 @@ app.delete("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, account_verified} = userDetails.rows[0];
+        if(account_verified === "false"){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
             logger.debug("no data to delete");
@@ -425,6 +558,11 @@ app.get("/v1/user/self/pic", async (req, res) => {
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, account_verified} = userDetails.rows[0];
+        if(account_verified === "false"){
+            return res.status(401).json("unverifed account");
+        }
         const imageDetails = await pool.query("SELECT * FROM images where user_id=$1", [userDetails.rows[0].id]);
 
         if (imageDetails.rows.length == 0) {
