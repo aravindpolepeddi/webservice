@@ -132,7 +132,7 @@ app.get("/healthz", (req, res) => {
   }
 });
 
-app.post("/v1/verifyUserEmail", async (req, res) => {
+app.get("/v1/verifyUserEmail", async (req, res) => {
   try {
     let flag = false;
     const check = req.body ? Object.keys(req.body) : null;
