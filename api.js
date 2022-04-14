@@ -175,12 +175,6 @@ app.post("/v1/user", async (req, res) => {
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
 
-        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
-        if(isverified.rows[0].account_verified === "false"){
-            logger.debug("unverified user hit");
-            return res.status(400).json("unverifed account");
-        }
-
         check.forEach((value) => {
             if (!requiredFields1.includes(value)) {
                 flag = true;
