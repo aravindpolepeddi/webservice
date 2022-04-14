@@ -267,11 +267,7 @@ app.get("/v1/user/self", async (req, res) => {
             logger.debug("no username and password");
             return res.status(403).json('Forbidden Request!');
         }
-
-        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
-        if(isverified === false){
-            return res.status(400).json("unverifed account");
-        }
+        
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
@@ -286,15 +282,19 @@ app.get("/v1/user/self", async (req, res) => {
             }
 
             if (response) { // if the password matches
-                const { id, first_name, last_name, username, account_created, account_updated } = userDetails.rows[0];
+                const { id, first_name, last_name, username, account_created, account_updated, isverified} = userDetails.rows[0];
                 const response = {
                     "id": id,
                     "first_name": first_name,
                     "last_name": last_name,
                     "username": username,
                     "account_created": account_created,
-                    "account_updated": account_updated
+                    "account_updated": account_updated,
+                    "account_verified": isverified
                 };
+                if(isverified === false){
+                    return res.status(400).json("unverifed account");
+                }
                 logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
@@ -327,11 +327,6 @@ app.put("/v1/user/self", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
-        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
-        if(isverified === false){
-            return res.status(400).json("unverifed account");
-        }
-
         const check = req.body ? Object.keys(req.body) : null;
         const { first_name, last_name } = req.body;
         const requiredFields = ["first_name", "last_name", "password"];
@@ -359,6 +354,10 @@ app.put("/v1/user/self", async (req, res) => {
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]);
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, isverified} = userDetails.rows[0];
+        if(isverified === false){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) {
             return res.status(401).json('Unauthorized');
@@ -414,12 +413,13 @@ app.post("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
-        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
-        if(isverified === false){
-            return res.status(400).json("unverifed account");
-        }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, isverified} = userDetails.rows[0];
+        if(isverified === false){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
             logger.debug("no user exists");
@@ -498,12 +498,13 @@ app.delete("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
-        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
-        if(isverified === false){
-            return res.status(400).json("unverifed account");
-        }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, isverified} = userDetails.rows[0];
+        if(isverified === false){
+            return res.status(401).json("unverifed account");
+        }
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
             logger.debug("no data to delete");
@@ -563,6 +564,11 @@ app.get("/v1/user/self/pic", async (req, res) => {
         }
 
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
+
+        const { id, ret_first_name, ret_last_name, ret_username, account_created, account_updated, isverified} = userDetails.rows[0];
+        if(isverified === false){
+            return res.status(401).json("unverifed account");
+        }
         const imageDetails = await pool.query("SELECT * FROM images where user_id=$1", [userDetails.rows[0].id]);
 
         if (imageDetails.rows.length == 0) {
