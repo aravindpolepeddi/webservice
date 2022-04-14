@@ -147,13 +147,13 @@ app.get("/v1/verifyUserEmail", async (req, res) => {
     }
 
     else{
-        const { username, token } = req.query;
+        const { email, token } = req.query;
         var result = logSingleItem(token);
         if (result=""){
             res.status(400).json("link expired");
         }
         else{
-            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ["true",username]);
+            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
             res.status(201).json("created");
         } 
 
@@ -237,7 +237,7 @@ console.log(SNSparams);
          const account_verified=false;
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
-        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), "false"]);
+        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), 'false']);
         res.status(201).json(newEntry.rows[0]);
 
     } catch (e) {
