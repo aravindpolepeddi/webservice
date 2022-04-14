@@ -153,7 +153,7 @@ app.get("/v1/verifyUserEmail", async (req, res) => {
             res.status(400).json("link expired");
         }
         else{
-            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", [true,username]);
+            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ["true",username]);
             res.status(201).json("created");
         } 
 
