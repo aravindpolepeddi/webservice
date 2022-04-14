@@ -147,18 +147,17 @@ app.get("/v1/verifyUserEmail", async (req, res) => {
     }
 
     else{
-        const { email, token } = req.query;
+        const { username, token } = req.query;
         var result = logSingleItem(token);
         if (result=""){
             res.status(400).json("link expired");
         }
         else{
-            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE email = $2", [true,email]);
-            res.status(201).json(newEntry.rows[0]);
+            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", [true,username]);
+            res.status(201).json("created");
         } 
 
     }
-    res.json(req.body);
   } catch (e) {
     console.error(e.message);
   }
