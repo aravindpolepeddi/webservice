@@ -27,6 +27,8 @@ const logConfiguration = {
 };
 const logger = winston.createLogger(logConfiguration);
 
+
+
 const app = express();
 app.use(express.json());
 app.use(fileupload());
@@ -101,7 +103,14 @@ async function logSingleItem(token){
             }, 
             TableName: "myTableName"
         };
-        var result = await dynamodb.getItem(params).promise()
+        var result = await dynamodb.getItem(params).promise();
+        const secondsSinceEpoch = Math.round(Date.now() / 1000);
+        if (Object.keys(result).length !== 0) {
+         if (result.Item.TTL < secondsSinceEpoch) {
+             return res.status(401).json('Token expired');
+         }
+      }
+        
         return (JSON.stringify(result));
     } catch (error) {
         return error;
@@ -135,11 +144,12 @@ app.post("/v1/verifyUserEmail", async (req, res) => {
         logger.debug("invalid parameters trying to send");
         return res.status(400).json("somthing wrong");
     }
+
     else{
         const { email, token } = req.query;
         var result = logSingleItem(token);
         if (result=""){
-            console.error("link expired");  
+            res.status(400).json("link expired");
         }
         else{
             const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE email = $2", [true,email]);
@@ -205,10 +215,18 @@ app.post("/v1/user", async (req, res) => {
         const token = jwt.sign({ username }, 'my_secret_key');
         
         const SNSparams = {
-            Message: '{"username": username, "first_name": first_name, "last_name": last_name, "password": password,"email": username, "token": token}',
-            TopicArn: 'arn:aws:sns:us-east-1:487291657422:csye6226-sns-topic-Tv01'
-        };
-        
+            Message: JSON.stringify({
+                username,
+                token,
+                messageType: "Notification",
+                domainName: "prod.polepeddiaravind.me",
+                first_name: first_name,
+                verified: false
+            }),
+            TopicArn: 'arn:aws:sns:us-east-1:487291657422:csye6226-sns-topic-Tv01',
+        }
+console.log(SNSparams);
+
         sns.publish(SNSparams, function(err, data) {
             if (err) console.log(err, err.stack); 
             else console.log(data + "triggred");
@@ -221,7 +239,7 @@ app.post("/v1/user", async (req, res) => {
          const account_verified=false;
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
-        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7 $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), account_verified]);
+        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), false]);
         res.status(201).json(newEntry.rows[0]);
 
     } catch (e) {
@@ -480,7 +498,7 @@ app.delete("/v1/user/self/pic", async (req, res) => {
         if(isverified === false){
             return res.status(400).json("unverifed account");
         }
-        
+
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
