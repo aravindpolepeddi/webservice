@@ -280,6 +280,15 @@ app.get("/v1/user/self", async (req, res) => {
                 if(account_verified === "false"){
                     return res.status(400).json("unverifed account");
                 }
+                const response = {
+                    "id": id,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "username": username,
+                    "account_created": account_created,
+                    "account_updated": account_updated,
+                    "account_verified": account_verified
+                };
                 logger.debug("user fetched successfully");
                 res.status(200).json(response); // return the details of the user
             } else { // if the password does not match, return Unauthorized
