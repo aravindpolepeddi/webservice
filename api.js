@@ -93,6 +93,21 @@ function save(userid, token, status) {
     });
 };
 
+async function logSingleItem(token){
+    try {
+        var params = {
+            Key: {
+             "token": {"S": token}
+            }, 
+            TableName: "myTableName"
+        };
+        var result = await dynamodb.getItem(params).promise()
+        return (JSON.stringify(result));
+    } catch (error) {
+        return error;
+    }
+}
+
 
 
 
@@ -107,11 +122,32 @@ app.get("/healthz", (req, res) => {
   }
 });
 
-app.get("/gettest", async (req, res) => {
+app.post("/v1/verifyUserEmail", async (req, res) => {
   try {
-    statsClient.increment('systemname.subsystem.value');
-    const allNames = await pool.query("SELECT * FROM healthz");
-    res.json(allNames.rows);
+    let flag = false;
+    const check = req.body ? Object.keys(req.body) : null;
+    check.forEach((value) => {
+        if (!requiredFields1.includes(value)) {
+            flag = true;
+        }
+    })
+    if (flag) {
+        logger.debug("invalid parameters trying to send");
+        return res.status(400).json("somthing wrong");
+    }
+    else{
+        const { email, token } = req.query;
+        var result = logSingleItem(token);
+        if (result=""){
+            console.error("link expired");  
+        }
+        else{
+            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE email = $2", [true,email]);
+            res.status(201).json(newEntry.rows[0]);
+        } 
+
+    }
+    res.json(req.body);
   } catch (e) {
     console.error(e.message);
   }
@@ -128,6 +164,11 @@ app.post("/v1/user", async (req, res) => {
 
         const requiredFields1 = ["first_name", "last_name", "password", "username", "account_created", "account_updated"];
         let flag = false;
+
+        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
+        if(isverified === ""){
+            return res.status(400).json("unverifed account");
+        }
 
         check.forEach((value) => {
             if (!requiredFields1.includes(value)) {
@@ -161,14 +202,11 @@ app.post("/v1/user", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         //sns publish and then add entry in DB
+        const token = jwt.sign({ username }, 'my_secret_key');
         
         const SNSparams = {
-            Message: {"username": username,
-                      "first_name": first_name,
-                      "last_name": last_name,
-                      "password": password,
-                      "email": username},
-            TopicArn: 'csye6226-sns-topic-Tv01'
+            Message: '{"username": username, "first_name": first_name, "last_name": last_name, "password": password,"email": username, "token": token}',
+            TopicArn: 'arn:aws:sns:us-east-1:487291657422:csye6226-sns-topic-Tv01'
         };
         
         sns.publish(SNSparams, function(err, data) {
@@ -176,14 +214,14 @@ app.post("/v1/user", async (req, res) => {
             else console.log(data + "triggred");
         });
 
-        //const token = jwt.sign({ username }, 'my_secret_key');
+        
 
-        //save(username,token,"ok");
+        save(username,token,"ok");
 
-
+         const account_verified=false;
         // check if the username exists
         const existingEmail = await pool.query("SELECT * FROM healthz where username=$1", [username]);
-        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated) values ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, username, account_created, account_updated", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date()]);
+        const newEntry = await pool.query("INSERT INTO healthz (id, first_name, last_name, password, username, account_created, account_updated, account_verified) values ($1, $2, $3, $4, $5, $6, $7 $8) RETURNING id, first_name, last_name, username, account_created, account_updated, account_verified", [uuid.v4(), first_name, last_name, hashedPassword, username, new Date(), new Date(), account_verified]);
         res.status(201).json(newEntry.rows[0]);
 
     } catch (e) {
@@ -208,6 +246,10 @@ app.get("/v1/user/self", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
+        if(isverified === false){
+            return res.status(400).json("unverifed account");
+        }
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
@@ -263,6 +305,10 @@ app.put("/v1/user/self", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
+        if(isverified === false){
+            return res.status(400).json("unverifed account");
+        }
 
         const check = req.body ? Object.keys(req.body) : null;
         const { first_name, last_name } = req.body;
@@ -346,6 +392,11 @@ app.post("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
+        if(isverified === false){
+            return res.status(400).json("unverifed account");
+        }
+
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
@@ -425,6 +476,11 @@ app.delete("/v1/user/self/pic", async (req, res) => {
             return res.status(403).json('Forbidden Request!');
         }
 
+        var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
+        if(isverified === false){
+            return res.status(400).json("unverifed account");
+        }
+        
         const userDetails = await pool.query("SELECT * FROM healthz where username=$1", [username]); // check if the user is present in the DB
 
         if (userDetails.rows.length == 0) { // if the user does not exist, return Unauthorized
