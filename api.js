@@ -104,6 +104,7 @@ async function logSingleItem(token){
             TableName: "myTableName"
         };
         var result = await dynamodb.getItem(params).promise();
+        logger.debug("get getails from dymano");
         const secondsSinceEpoch = Math.round(Date.now() / 1000);
         if (Object.keys(result).length !== 0) {
          if (result.Item.TTL < secondsSinceEpoch) {
@@ -177,6 +178,7 @@ app.post("/v1/user", async (req, res) => {
 
         var isverified  = await pool.query("SELECT account_verified FROM healthz where username=$1", [username]);
         if(isverified === ""){
+            logger.debug("unverified user hit");
             return res.status(400).json("unverifed account");
         }
 
@@ -228,8 +230,11 @@ app.post("/v1/user", async (req, res) => {
 console.log(SNSparams);
 
         sns.publish(SNSparams, function(err, data) {
+            logger.debug("enterd sns publish");
             if (err) console.log(err, err.stack); 
-            else console.log(data + "triggred");
+            else {console.log(data + "triggred");
+            logger.debug("success sns");
+        }
         });
 
         
