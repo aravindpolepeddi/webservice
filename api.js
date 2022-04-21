@@ -138,6 +138,7 @@ app.get("/healthz", (req, res) => {
 
 app.get('/v1/verifyUserEmail', (req, res) => {
     const { email, token } = req.query;
+    console.log("User verification request received");
     logger.info(`User verification request received for userId: ${email}`);
     try {
         const secondsSinceEpoch = Math.round(Date.now() / 1000);
@@ -150,15 +151,19 @@ app.get('/v1/verifyUserEmail', (req, res) => {
         };
         docClient.get(params, async function (err, data) {
             if (err) {
+                console.log("error"+err);
                 logger.error("users::fetchOneByKey::error - " + JSON.stringify(err, null, 2));
             }
             else {
+                console.log("ok"+data);
                 logger.info("users::fetchOneByKey::success - " + JSON.stringify(data, null, 2));
                 if (Object.keys(data).length === 0) {
+                    console.log("token expired");
                     return res.status(401).json('Token expired');
                 }
                 if (Object.keys(data).length !== 0) {
                     if (data.Item.TTL < secondsSinceEpoch) {
+                        console.log("token expired");
                         return res.status(401).json('Token expired');
                     }
                 }

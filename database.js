@@ -1,6 +1,6 @@
 const Pool = require('pg').Pool;
 const fs = require('fs');
-
+/*
 const pool = new Pool({
     host: process.env.DB_CONNECTION,
     user: process.env.DB_USERNAME,
@@ -12,16 +12,16 @@ const pool = new Pool({
           .readFileSync("./us-east-1-bundle.pem")
           .toString()
       }
-});
+});*/
 
 
-/*
+
 const pool = new Pool({
 host: "localhost",
 user: "postgres",
 port: "5432",
 password: "@uest123!",
 database: "postgres"
-})*/
+})
 
 module.exports = pool;
