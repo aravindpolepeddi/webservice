@@ -1,11 +1,17 @@
 const Pool = require('pg').Pool;
 
+
 const pool = new Pool({
     host: process.env.DB_CONNECTION,
     user: process.env.DB_USERNAME,
     port: process.env.PORT,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    ssl: {
+        ca: fs
+          .readFileSync("./us-east-1-bundle.pem")
+          .toString()
+      }
 });
 
 
