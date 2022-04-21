@@ -148,10 +148,20 @@ app.get("/v1/verifyUserEmail", async (req, res) => {
 
     else{
         const { email, token } = req.query;
-        var result = logSingleItem(token);
-        if (result=""){
-            res.status(400).json("link expired");
-        }
+            var params = {
+                Key: {
+                 "token": {"S": token}
+                }, 
+                TableName: "myTableName"
+            };
+            var result = await dynamodb.getItem(params).promise();
+            logger.debug("get getails from dymano");
+            const secondsSinceEpoch = Math.round(Date.now() / 1000);
+            if (Object.keys(result).length !== 0) {
+             if (result.Item.TTL < secondsSinceEpoch) {
+                 return res.status(401).json('Token expired');
+             }
+          }
         else{
             const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
             res.status(201).json("created");
