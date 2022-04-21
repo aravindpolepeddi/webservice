@@ -134,6 +134,7 @@ app.get("/healthz", (req, res) => {
 
 app.get("/v1/verifyUserEmail", async (req, res) => {
   try {
+    logger.debug("in verify email part");
     let flag = false;
     const check = req.body ? Object.keys(req.body) : null;
     check.forEach((value) => {
@@ -159,11 +160,13 @@ app.get("/v1/verifyUserEmail", async (req, res) => {
             const secondsSinceEpoch = Math.round(Date.now() / 1000);
             if (Object.keys(result).length !== 0) {
              if (result.Item.TTL < secondsSinceEpoch) {
-                 return res.status(401).json('Token expired');
+                logger.debug("expired");
+                  res.status(401).json('Token expired');
              }
           }
         else{
             const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
+            logger.debug("created");
             res.status(201).json("created");
         } 
 
