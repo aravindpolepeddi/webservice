@@ -1,5 +1,5 @@
 const Pool = require('pg').Pool;
-
+const fs = require('fs');
 
 const pool = new Pool({
     host: process.env.DB_CONNECTION,
