@@ -132,36 +132,53 @@ app.get("/healthz", (req, res) => {
   }
 });
 
-app.get("/v1/verifyUserEmail", async (req, res) => {
-  try {
-    let flag = false;
-    const check = req.body ? Object.keys(req.body) : null;
-    check.forEach((value) => {
-        if (!requiredFields1.includes(value)) {
-            flag = true;
-        }
-    })
-    if (flag) {
-        logger.debug("invalid parameters trying to send");
-        return res.status(400).json("somthing wrong");
-    }
 
-    else{
-        const { email, token } = req.query;
-        var result = logSingleItem(token);
-        if (result=""){
-            res.status(400).json("link expired");
-        }
-        else{
-            const newEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
-            res.status(201).json("created");
-        } 
 
+
+
+app.get('/v1/verifyUserEmail', (req, res) => {
+    const { email, token } = req.query;
+    console.log("User verification request received");
+    logger.info(`User verification request received for userId: ${email}`);
+    try {
+        const secondsSinceEpoch = Math.round(Date.now() / 1000);
+        var params = {
+            TableName: "myTableName",
+            // TableName: "csye6225",
+            Key: {
+                "Token": token
+            }
+        };
+        docClient.get(params, async function (err, data) {
+            if (err) {
+                console.log("error"+err);
+                logger.error("users::fetchOneByKey::error - " + JSON.stringify(err, null, 2));
+            }
+            else {
+                console.log("ok"+data);
+                logger.info("users::fetchOneByKey::success - " + JSON.stringify(data, null, 2));
+                if (Object.keys(data).length === 0) {
+                    console.log("token expired");
+                    return res.status(401).json('Token expired');
+                }
+                if (Object.keys(data).length !== 0) {
+                    if (data.Item.TTL < secondsSinceEpoch) {
+                        console.log("token expired");
+                        return res.status(401).json('Token expired');
+                    }
+                }
+                const updatedEntry = await pool.query("UPDATE healthz SET account_verified = $1 WHERE username = $2", ['true',email]);
+                return res.status(400).json('User verified successfully!');
+            }
+        });
+        logger.info(`User: ${email}, successfully verified!`);
+    } catch (e) {
+        res.json(e.message);
     }
-  } catch (e) {
-    console.error(e.message);
-  }
-});
+})
+
+
+
 
 // create a new user
 app.post("/v1/user", async (req, res) => {
